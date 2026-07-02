@@ -1,6 +1,6 @@
 package com.codesimcoe.newtonparticlesfx;
 
-public record Vector2D(double x, double y) {
+public value record Vector2D(double x, double y) {
   Vector2D add(Vector2D other) {
     return new Vector2D(x + other.x, y + other.y);
   }

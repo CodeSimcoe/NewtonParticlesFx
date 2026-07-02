@@ -90,6 +90,7 @@ public class NewtonParticlesFxMain extends Application {
     Vector2D dir = b.position().sub(a.position());
 
     double dist2 = Math.max(dir.norm2(), 25.0);
+//    double dist2 = dir.norm2();
     double strength = (1.0 * a.mass() * b.mass()) / dist2;
 //    double strength = (6.67e-11 * a.mass() * b.mass()) / dist2;
 
@@ -109,9 +110,9 @@ public class NewtonParticlesFxMain extends Application {
 
     gc.setFill(Color.WHITE);
 
-    for (Body b : bodies) {
-      gc.fillOval(b.position().x(), b.position().y(), 2, 2);
-    }
+    bodies.stream()
+      .map(Body::position)
+      .forEach(p -> gc.fillOval(p.x(), p.y(), 2, 2));
   }
 
   // ----------------------------
@@ -130,7 +131,7 @@ public class NewtonParticlesFxMain extends Application {
     ));
 
     // particules orbitales
-    for (int i = 0; i < 5_000; i++) {
+    for (int i = 0; i < 500; i++) {
 
       double angle = Math.random() * 2 * Math.PI;
       double radius = 100 + Math.random() * 200;
