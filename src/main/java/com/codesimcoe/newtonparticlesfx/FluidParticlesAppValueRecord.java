@@ -2,6 +2,7 @@ package com.codesimcoe.newtonparticlesfx;
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -104,6 +105,7 @@ public class FluidParticlesAppValueRecord extends Application {
         scene.setOnMouseDragged(this::onMouseMove);
         scene.setOnMousePressed(_ -> mouseDown = true);
         scene.setOnMouseReleased(_ -> mouseDown = false);
+        scene.setCursor(Cursor.NONE);
 
         stage.setScene(scene);
         stage.setTitle("Fluid Particles (record version)");
