@@ -46,15 +46,25 @@ public value record ColorRGB(double r, double g, double b) {
   }
 
   /**
-   * Simple Reinhard tone mapping.
+   * Filmic ACES approximation for high-contrast scene lighting.
    */
   public ColorRGB toneMap() {
 
     return new ColorRGB(
-      r / (1.0 + r),
-      g / (1.0 + g),
-      b / (1.0 + b)
+      toneMap(r),
+      toneMap(g),
+      toneMap(b)
     );
+  }
+
+  private static double toneMap(double x) {
+    double a = 2.51;
+    double b = 0.03;
+    double c = 2.43;
+    double d = 0.59;
+    double e = 0.14;
+
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e));
   }
 
   /**

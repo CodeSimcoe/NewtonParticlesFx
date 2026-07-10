@@ -17,6 +17,11 @@
             <artifactId>javafx-graphics</artifactId>
             <version>${javafx.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -38,9 +43,14 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>newtonparticlesfx/com.codesimcoe.newtonparticlesfx.NewtonParticlesFxMain</mainClass>
+                <mainClass>newtonparticlesfx/com.codesimcoe.blackhole.App</mainClass>
                     <options>
+                        <option>--enable-preview</option>
                         <option>--enable-native-access=javafx.graphics</option>
+                        <option>--add-exports</option>
+                        <option>java.base/jdk.internal.vm.annotation=newtonparticlesfx</option>
+                        <option>--add-exports</option>
+                        <option>java.base/jdk.internal.value=newtonparticlesfx</option>
                     </options>
                 </configuration>
             </plugin>

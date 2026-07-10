@@ -73,6 +73,9 @@ public final class Constants {
     public static final int DEFAULT_WIDTH = 1280;
     public static final int DEFAULT_HEIGHT = 720;
 
+    public static final int COMPARISON_WIDTH = 640;
+    public static final int COMPARISON_HEIGHT = 360;
+
     public static final double CAMERA_FOV_DEGREES = 42.0;
 
     public static final Vec3 CAMERA_POSITION =

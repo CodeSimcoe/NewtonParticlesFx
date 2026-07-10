@@ -1,5 +1,8 @@
 package com.codesimcoe.blackhole;
 
+import jdk.internal.vm.annotation.LooselyConsistentValue;
+
+@LooselyConsistentValue
 public value record Ray(
   Vec3 position,
   Vec3 direction,

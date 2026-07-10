@@ -5,6 +5,12 @@ import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 
+import com.sun.management.ThreadMXBean;
+import jdk.internal.value.ValueClass;
+
+import java.lang.management.ManagementFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.IntStream;
 
 public final class Renderer {
@@ -15,10 +21,16 @@ public final class Renderer {
   private final int height;
   private final Camera camera;
   private final WritableImage image;
+  private final RenderListener listener;
 
   public Renderer(int width, int height) {
+    this(width, height, RenderListener.NONE);
+  }
+
+  public Renderer(int width, int height, RenderListener listener) {
     this.width = width;
     this.height = height;
+    this.listener = listener;
 
     this.camera = new Camera(
       Constants.CAMERA_POSITION,
@@ -39,26 +51,44 @@ public final class Renderer {
 
   public void render() {
 
+    long startedAt = System.nanoTime();
     int[] pixels = new int[width * height];
-
+    Ray[] states = newStateArray(width * height);
     int batchCount = (height + ROWS_PER_PUBLISH - 1) / ROWS_PER_PUBLISH;
+    AtomicInteger completedBatches = new AtomicInteger();
+    LongAdder tracedSteps = new LongAdder();
+    LongAdder allocatedBytes = new LongAdder();
+    ThreadMXBean threadMxBean = threadMxBean();
 
     IntStream.range(0, batchCount)
       .parallel()
       .forEach(batch -> {
+        long threadId = Thread.currentThread().threadId();
+        long allocatedBefore = allocatedBytes(threadMxBean, threadId);
 
         int firstRow = batch * ROWS_PER_PUBLISH;
         int rowCount = Math.min(ROWS_PER_PUBLISH, height - firstRow);
 
         for (int y = firstRow; y < firstRow + rowCount; y++) {
           for (int x = 0; x < width; x++) {
-            ColorRGB color = tracePixel(x, y);
-            pixels[y * width + x] = color.toARGB();
+            int index = y * width + x;
+            ColorRGB color = tracePixel(x, y, index, states, tracedSteps);
+            pixels[index] = color.toARGB();
           }
         }
 
         publishRows(pixels, firstRow, rowCount);
+        allocatedBytes.add(allocatedBytes(threadMxBean, threadId) - allocatedBefore);
+        listener.onProgress(completedBatches.incrementAndGet(), batchCount);
       });
+
+    CinematicPostProcessor.apply(pixels, width, height);
+    publishRows(pixels, 0, height);
+    listener.onComplete(new RenderStats(
+      System.nanoTime() - startedAt,
+      tracedSteps.sum(),
+      allocatedBytes.sum()
+    ));
   }
 
   private void fillBlack() {
@@ -96,18 +126,29 @@ public final class Renderer {
     });
   }
 
-  private ColorRGB tracePixel(int x, int y) {
+  private ColorRGB tracePixel(
+    int x,
+    int y,
+    int index,
+    Ray[] states,
+    LongAdder tracedSteps) {
 
     Ray ray = camera.createRay(x, y, width, height);
+    states[index] = ray;
 
     ColorRGB accumulatedDisk = ColorRGB.BLACK;
 
     Vec3 previousPosition = ray.position();
 
     for (int i = 0; i < Constants.MAX_STEPS; i++) {
+      tracedSteps.increment();
 
       if (ray.absorbed()) {
-        return horizonColor(previousPosition).add(accumulatedDisk);
+        return applyVignette(
+          horizonColor(previousPosition).add(accumulatedDisk),
+          x,
+          y
+        );
       }
 
       if (ray.distance() > Constants.MAX_DISTANCE) {
@@ -132,6 +173,7 @@ public final class Renderer {
         next = next.attenuate(0.72);
       }
 
+      states[index] = next;
       previousPosition = ray.position();
       ray = next;
     }
@@ -140,7 +182,39 @@ public final class Renderer {
 
     double boost = Schwarzschild.lensingBoost(ray.position());
 
-    return accumulatedDisk.add(background.mul(boost));
+    return applyVignette(accumulatedDisk.add(background.mul(boost)), x, y);
+  }
+
+  private ColorRGB applyVignette(ColorRGB color, int x, int y) {
+    double nx = (2.0 * x / (width - 1)) - 1.0;
+    double ny = (2.0 * y / (height - 1)) - 1.0;
+    double edge = Math.min(1.0, nx * nx + ny * ny);
+
+    return color.mul(1.0 - 0.32 * edge * edge);
+  }
+
+  private static ThreadMXBean threadMxBean() {
+    ThreadMXBean bean = ManagementFactory.getPlatformMXBean(ThreadMXBean.class);
+
+    if (bean.isThreadAllocatedMemorySupported() && !bean.isThreadAllocatedMemoryEnabled()) {
+      bean.setThreadAllocatedMemoryEnabled(true);
+    }
+
+    return bean;
+  }
+
+  private static Ray[] newStateArray(int length) {
+    return (Ray[]) ValueClass.newNullRestrictedNonAtomicArray(
+      Ray.class,
+      length,
+      Ray.create(Vec3.ZERO, Vec3.ZERO)
+    );
+  }
+
+  private static long allocatedBytes(ThreadMXBean bean, long threadId) {
+    return bean.isThreadAllocatedMemorySupported()
+      ? bean.getThreadAllocatedBytes(threadId)
+      : 0L;
   }
 
   private ColorRGB horizonColor(Vec3 lastPosition) {
