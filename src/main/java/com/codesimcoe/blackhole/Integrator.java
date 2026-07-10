@@ -7,11 +7,11 @@ public final class Integrator {
 
   public static Ray step(Ray ray, double ds) {
 
-    if (ray.absorbed) {
+    if (ray.absorbed()) {
       return ray;
     }
 
-    State s0 = new State(ray.position, ray.direction);
+    State s0 = new State(ray.position(), ray.direction());
 
     State k1 = derivative(s0);
     State k2 = derivative(s0.add(k1.mul(ds * 0.5)));
@@ -48,16 +48,16 @@ public final class Integrator {
 
     for (int i = 0; i < Constants.MAX_STEPS; i++) {
 
-      if (current.absorbed) {
+      if (current.absorbed()) {
         return current;
       }
 
-      if (current.distance >= Constants.MAX_DISTANCE) {
+      if (current.distance() >= Constants.MAX_DISTANCE) {
         return current;
       }
 
-      if (current.position.length() >= Constants.ESCAPE_RADIUS
-        && current.direction.dot(current.position.normalize()) > 0.0) {
+      if (current.position().length() >= Constants.ESCAPE_RADIUS
+        && current.direction().dot(current.position().normalize()) > 0.0) {
         return current;
       }
 
@@ -80,15 +80,7 @@ public final class Integrator {
     return new State(dp, dd);
   }
 
-  private static final class State {
-
-    final Vec3 position;
-    final Vec3 direction;
-
-    State(Vec3 position, Vec3 direction) {
-      this.position = position;
-      this.direction = direction;
-    }
+  private value record State(Vec3 position, Vec3 direction) {
 
     State add(State s) {
       return new State(

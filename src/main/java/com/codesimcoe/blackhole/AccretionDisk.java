@@ -9,13 +9,13 @@ public final class AccretionDisk {
 
     // Disk lies in the XZ plane, y = 0.
 
-    if (Math.signum(previous.y) == Math.signum(current.y)) {
+    if (Math.signum(previous.y()) == Math.signum(current.y())) {
       return false;
     }
 
     Vec3 p = intersectionWithPlaneY0(previous, current);
 
-    double r = Math.sqrt(p.x * p.x + p.z * p.z);
+    double r = Math.sqrt(p.x() * p.x() + p.z() * p.z());
 
     return r >= Constants.DISK_INNER_RADIUS
       && r <= Constants.DISK_OUTER_RADIUS;
@@ -25,8 +25,8 @@ public final class AccretionDisk {
 
     Vec3 p = intersectionWithPlaneY0(previous, current);
 
-    double r = Math.sqrt(p.x * p.x + p.z * p.z);
-    double angle = Math.atan2(p.z, p.x);
+    double r = Math.sqrt(p.x() * p.x() + p.z() * p.z());
+    double angle = Math.atan2(p.z(), p.x());
 
     double radial =
       1.0 - (r - Constants.DISK_INNER_RADIUS)
@@ -34,25 +34,25 @@ public final class AccretionDisk {
 
     radial = clamp(radial);
 
+    double spiral = 0.5 + 0.5 * Math.sin(10.0 * Math.log(r) - 5.0 * angle);
     double turbulence =
-      0.5
-        + 0.5 * Math.sin(18.0 * angle + 2.5 * r)
-        * Math.sin(7.0 * r - 3.0 * angle);
+      0.72
+        + 0.28 * spiral
+        * (0.5 + 0.5 * Math.sin(31.0 * angle + 3.5 * r));
 
-    double rings =
-      0.65 + 0.35 * Math.sin(12.0 * Math.log(r + 1.0));
+    double rings = 0.72 + 0.28 * Math.sin(18.0 * Math.log(r + 1.0));
 
     double brightness =
       Constants.DISK_BRIGHTNESS
         * Math.pow(radial, 1.7)
-        * (0.65 + 0.35 * turbulence)
+        * turbulence
         * rings;
 
     /*
      * Simple Keplerian rotation around Y axis.
      * Used to fake relativistic Doppler beaming.
      */
-    Vec3 tangent = new Vec3(-p.z, 0.0, p.x).normalize();
+    Vec3 tangent = new Vec3(-p.z(), 0.0, p.x()).normalize();
 
     double orbitalSpeed =
       Math.sqrt(Constants.M / Math.max(r, Constants.DISK_INNER_RADIUS));
@@ -60,7 +60,7 @@ public final class AccretionDisk {
     orbitalSpeed = Math.min(0.55, orbitalSpeed);
 
     double doppler =
-      1.0 / (1.0 - orbitalSpeed * tangent.dot(ray.direction.negate()));
+      1.0 / (1.0 - orbitalSpeed * tangent.dot(ray.direction().negate()));
 
     doppler = clamp(doppler, 0.35, 2.8);
 
@@ -70,25 +70,25 @@ public final class AccretionDisk {
     brightness *= redshift;
 
     ColorRGB hot =
-      new ColorRGB(1.0, 0.72, 0.32);
+      new ColorRGB(1.0, 0.52, 0.12);
 
     ColorRGB whiteHot =
-      new ColorRGB(1.0, 0.95, 0.78);
+      new ColorRGB(1.0, 0.88, 0.58);
 
     ColorRGB deepOrange =
-      new ColorRGB(0.95, 0.28, 0.05);
+      new ColorRGB(0.62, 0.035, 0.008);
 
     ColorRGB base =
       ColorRGB.lerp(deepOrange, hot, radial);
 
     base = ColorRGB.lerp(base, whiteHot, Math.pow(radial, 4.0));
 
-    return base.mul(brightness * ray.intensity);
+    return base.mul(brightness * ray.intensity());
   }
 
   private static Vec3 intersectionWithPlaneY0(Vec3 a, Vec3 b) {
 
-    double t = a.y / (a.y - b.y);
+    double t = a.y() / (a.y() - b.y());
 
     return a.lerp(b, t);
   }

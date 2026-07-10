@@ -1,13 +1,15 @@
 package com.codesimcoe.blackhole;
 
 import javafx.application.Platform;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 public final class Renderer {
+
+  private static final int ROWS_PER_PUBLISH = 16;
 
   private final int width;
   private final int height;
@@ -39,54 +41,58 @@ public final class Renderer {
 
     int[] pixels = new int[width * height];
 
-    AtomicInteger completedRows = new AtomicInteger();
+    int batchCount = (height + ROWS_PER_PUBLISH - 1) / ROWS_PER_PUBLISH;
 
-    IntStream.range(0, height)
+    IntStream.range(0, batchCount)
       .parallel()
-      .forEach(y -> {
+      .forEach(batch -> {
 
-        for (int x = 0; x < width; x++) {
-          ColorRGB color = tracePixel(x, y);
-          pixels[y * width + x] = color.toARGB();
+        int firstRow = batch * ROWS_PER_PUBLISH;
+        int rowCount = Math.min(ROWS_PER_PUBLISH, height - firstRow);
+
+        for (int y = firstRow; y < firstRow + rowCount; y++) {
+          for (int x = 0; x < width; x++) {
+            ColorRGB color = tracePixel(x, y);
+            pixels[y * width + x] = color.toARGB();
+          }
         }
 
-        int done = completedRows.incrementAndGet();
-
-        if (done % 8 == 0 || done == height) {
-          publishRows(pixels);
-        }
+        publishRows(pixels, firstRow, rowCount);
       });
-
-    publishRows(pixels);
   }
 
   private void fillBlack() {
     Platform.runLater(() -> {
       PixelWriter writer = image.getPixelWriter();
+      int[] black = new int[width * height];
 
-      for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-          writer.setArgb(x, y, 0xFF000000);
-        }
-      }
+      java.util.Arrays.fill(black, 0xFF000000);
+      writer.setPixels(
+        0,
+        0,
+        width,
+        height,
+        PixelFormat.getIntArgbInstance(),
+        black,
+        0,
+        width
+      );
     });
   }
 
-  private void publishRows(int[] pixels) {
+  private void publishRows(int[] pixels, int firstRow, int rowCount) {
     Platform.runLater(() -> {
       PixelWriter writer = image.getPixelWriter();
-
-      for (int y = 0; y < height; y++) {
-        int rowOffset = y * width;
-
-        for (int x = 0; x < width; x++) {
-          int argb = pixels[rowOffset + x];
-
-          if (argb != 0) {
-            writer.setArgb(x, y, argb);
-          }
-        }
-      }
+      writer.setPixels(
+        0,
+        firstRow,
+        width,
+        rowCount,
+        PixelFormat.getIntArgbInstance(),
+        pixels,
+        firstRow * width,
+        width
+      );
     });
   }
 
@@ -96,27 +102,27 @@ public final class Renderer {
 
     ColorRGB accumulatedDisk = ColorRGB.BLACK;
 
-    Vec3 previousPosition = ray.position;
+    Vec3 previousPosition = ray.position();
 
     for (int i = 0; i < Constants.MAX_STEPS; i++) {
 
-      if (ray.absorbed) {
+      if (ray.absorbed()) {
         return horizonColor(previousPosition).add(accumulatedDisk);
       }
 
-      if (ray.distance > Constants.MAX_DISTANCE) {
+      if (ray.distance() > Constants.MAX_DISTANCE) {
         break;
       }
 
-      if (ray.position.length() > Constants.ESCAPE_RADIUS) {
+      if (ray.position().length() > Constants.ESCAPE_RADIUS) {
         break;
       }
 
       Ray next = Integrator.step(ray, Constants.STEP_SIZE);
 
-      if (AccretionDisk.crossesDisk(ray.position, next.position)) {
+      if (AccretionDisk.crossesDisk(ray.position(), next.position())) {
         ColorRGB diskColor =
-          AccretionDisk.sample(ray.position, next.position, next);
+          AccretionDisk.sample(ray.position(), next.position(), next);
 
         accumulatedDisk = accumulatedDisk.add(diskColor);
 
@@ -124,13 +130,13 @@ public final class Renderer {
         next = next.attenuate(0.72);
       }
 
-      previousPosition = ray.position;
+      previousPosition = ray.position();
       ray = next;
     }
 
-    ColorRGB background = StarField.sample(ray.direction);
+    ColorRGB background = StarField.sample(ray.direction());
 
-    double boost = Schwarzschild.lensingBoost(ray.position);
+    double boost = Schwarzschild.lensingBoost(ray.position());
 
     return accumulatedDisk.add(background.mul(boost));
   }

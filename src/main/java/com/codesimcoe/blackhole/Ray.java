@@ -1,51 +1,15 @@
 package com.codesimcoe.blackhole;
 
-public final value class Ray {
+public value record Ray(
+  Vec3 position,
+  Vec3 direction,
+  double distance,
+  int steps,
+  boolean absorbed,
+  double intensity) {
 
-  /**
-   * Current position in world space.
-   */
-  public final Vec3 position;
-
-  /**
-   * Current propagation direction (always normalized).
-   */
-  public final Vec3 direction;
-
-  /**
-   * Affine parameter / travelled distance.
-   */
-  public final double distance;
-
-  /**
-   * Number of integration steps already performed.
-   */
-  public final int steps;
-
-  /**
-   * Has the ray fallen into the event horizon?
-   */
-  public final boolean absorbed;
-
-  /**
-   * Accumulated intensity.
-   */
-  public final double intensity;
-
-  public Ray(
-    Vec3 position,
-    Vec3 direction,
-    double distance,
-    int steps,
-    boolean absorbed,
-    double intensity) {
-
-    this.position = position;
-    this.direction = direction.normalize();
-    this.distance = distance;
-    this.steps = steps;
-    this.absorbed = absorbed;
-    this.intensity = intensity;
+  public Ray {
+    direction = direction.normalize();
   }
 
   public static Ray create(Vec3 origin, Vec3 direction) {
@@ -87,7 +51,6 @@ public final value class Ray {
   }
 
   public Ray attenuate(double factor) {
-
     return new Ray(
       position,
       direction,
