@@ -27,11 +27,10 @@ public final class Integrator {
     State next = s0.add(delta);
 
     Vec3 nextPosition = next.position;
-    Vec3 nextDirection = next.direction.normalize();
 
     Ray advanced = ray.advance(
       nextPosition,
-      nextDirection,
+      next.direction,
       ds
     );
 
@@ -56,15 +55,24 @@ public final class Integrator {
         return current;
       }
 
-      if (current.position().length() >= Constants.ESCAPE_RADIUS
-        && current.direction().dot(current.position().normalize()) > 0.0) {
+      double radius = current.position().length();
+
+      if (radius >= Constants.ESCAPE_RADIUS
+        && current.direction().dot(current.position().div(radius)) > 0.0) {
         return current;
       }
 
-      current = step(current, Constants.STEP_SIZE);
+      current = step(current, stepSize(radius));
     }
 
     return current;
+  }
+
+  public static double stepSize(double radius) {
+    // Curvature decays rapidly outside the photon sphere.
+    double scale = 1.0 + Math.max(0.0, radius - Constants.PHOTON_SPHERE_RADIUS) * 0.2;
+
+    return Math.min(Constants.MAX_STEP_SIZE, Constants.STEP_SIZE * scale);
   }
 
   private static State derivative(State s) {

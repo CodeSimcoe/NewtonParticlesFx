@@ -114,11 +114,13 @@ public final class Renderer {
         break;
       }
 
-      if (ray.position().length() > Constants.ESCAPE_RADIUS) {
+      double radius = ray.position().length();
+
+      if (radius > Constants.ESCAPE_RADIUS) {
         break;
       }
 
-      Ray next = Integrator.step(ray, Constants.STEP_SIZE);
+      Ray next = Integrator.step(ray, Integrator.stepSize(radius));
 
       if (AccretionDisk.crossesDisk(ray.position(), next.position())) {
         ColorRGB diskColor =

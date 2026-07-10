@@ -15,7 +15,7 @@ public value record Ray(
   public static Ray create(Vec3 origin, Vec3 direction) {
     return new Ray(
       origin,
-      direction.normalize(),
+      direction,
       0.0,
       0,
       false,
@@ -30,7 +30,7 @@ public value record Ray(
 
     return new Ray(
       newPosition,
-      newDirection.normalize(),
+      newDirection,
       distance + ds,
       steps + 1,
       absorbed,

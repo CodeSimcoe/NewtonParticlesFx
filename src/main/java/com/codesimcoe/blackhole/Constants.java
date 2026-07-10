@@ -42,7 +42,9 @@ public final class Constants {
 
     public static final double STEP_SIZE = 0.035;
 
-    public static final int MAX_STEPS = 8_000;
+    public static final double MAX_STEP_SIZE = 0.14;
+
+    public static final int MAX_STEPS = 4_000;
 
     public static final double MAX_DISTANCE = 90.0;
 
