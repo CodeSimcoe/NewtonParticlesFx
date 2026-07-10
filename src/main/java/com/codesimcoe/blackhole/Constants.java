@@ -42,7 +42,7 @@ public final class Constants {
 
     public static final double STEP_SIZE = 0.035;
 
-    public static final int MAX_STEPS = 4_000;
+    public static final int MAX_STEPS = 8_000;
 
     public static final double MAX_DISTANCE = 90.0;
 
@@ -74,7 +74,7 @@ public final class Constants {
     public static final double CAMERA_FOV_DEGREES = 42.0;
 
     public static final Vec3 CAMERA_POSITION =
-            new Vec3(0.0, 6.0, -22.0);
+            new Vec3(0.0, 6.0, -35.0);
 
     public static final Vec3 CAMERA_TARGET =
             new Vec3(0.0, 0.0, 0.0);

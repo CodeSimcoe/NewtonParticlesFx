@@ -1,19 +1,9 @@
 package com.codesimcoe.blackhole;
 
-public final class ColorRGB {
-
-  public final double r;
-  public final double g;
-  public final double b;
+public value record ColorRGB(double r, double g, double b) {
 
   public static final ColorRGB BLACK = new ColorRGB(0.0, 0.0, 0.0);
   public static final ColorRGB WHITE = new ColorRGB(1.0, 1.0, 1.0);
-
-  public ColorRGB(double r, double g, double b) {
-    this.r = r;
-    this.g = g;
-    this.b = b;
-  }
 
   public ColorRGB add(ColorRGB c) {
     return new ColorRGB(
